@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  AGENCY
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+  INCOMPLETE
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String?
+  email            String            @unique
+  emailVerified    DateTime?
+  image            String?
+  password         String?
+  role             UserRole          @default(USER)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  stripeCustomerId String?           @unique
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  aiCredits        Int               @default(10)
+  accounts         Account[]
+  sessions         Session[]
+  facebookPages    FacebookPage[]
+  posts            Post[]
+  leads            Lead[]
+  subscription     Subscription?
+  notifications    Notification[]
+  whitelabelConfig WhitelabelConfig?
+  teamOwner        TeamMember[]      @relation("TeamOwner")
+  teamMember       TeamMember[]      @relation("TeamMember")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(TRIALING)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  trialEnd             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FacebookPage {
+  id             String          @id @default(cuid())
+  userId         String
+  pageId         String          @unique
+  name           String
+  accessToken    String          @db.Text
+  category       String?
+  picture        String?
+  followersCount Int             @default(0)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts          Post[]
+  leads          Lead[]
+  analytics      PageAnalytics[]
+}
+
+model Post {
+  id             String       @id @default(cuid())
+  userId         String
+  pageId         String
+  content        String       @db.Text
+  imageUrl       String?
+  linkUrl        String?
+  status         PostStatus   @default(DRAFT)
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  facebookPostId String?
+  aiGenerated    Boolean      @default(false)
+  engagement     Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page           FacebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id          String        @id @default(cuid())
+  userId      String
+  pageId      String?
+  name        String
+  email       String?
+  phone       String?
+  source      String?
+  status      LeadStatus    @default(NEW)
+  notes       String?       @db.Text
+  tags        String[]
+  metadata    Json?
+  convertedAt DateTime?
+  revenue     Float?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page        FacebookPage? @relation(fields: [pageId], references: [id])
+  messages    LeadMessage[]
+}
+
+model LeadMessage {
+  id        String   @id @default(cuid())
+  leadId    String
+  content   String   @db.Text
+  isFromBot Boolean  @default(false)
+  sentAt    DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model AutoReply {
+  id        String   @id @default(cuid())
+  userId    String
+  trigger   String
+  response  String   @db.Text
+  isActive  Boolean  @default(true)
+  hitCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PageAnalytics {
+  id           String       @id @default(cuid())
+  pageId       String
+  date         DateTime
+  impressions  Int          @default(0)
+  reach        Int          @default(0)
+  engagements  Int          @default(0)
+  newFollowers Int          @default(0)
+  leadsCount   Int          @default(0)
+  postsCount   Int          @default(0)
+  page         FacebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, date])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WhitelabelConfig {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  brandName    String
+  logoUrl      String?
+  primaryColor String  @default("#3B82F6")
+  domain       String?
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  ownerId   String
+  memberId  String
+  role      String   @default("VIEWER")
+  createdAt DateTime @default(now())
+  owner     User     @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  member    User     @relation("TeamMember", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, memberId])
+}
+
+model Invoice {
+  id              String    @id @default(cuid())
+  userId          String
+  stripeInvoiceId String    @unique
+  amount          Float
+  currency        String    @default("usd")
+  status          String
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+}
