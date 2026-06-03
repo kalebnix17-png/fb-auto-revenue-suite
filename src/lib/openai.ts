@@ -1,11 +1,11 @@
 import OpenAI from "openai";
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "placeholder" });
+}
 
 export async function generateFacebookPost(prompt: string): Promise<string> {
-  const completion = await openai.chat.completions.create({
+  const completion = await getClient().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
@@ -32,7 +32,7 @@ export async function generateAutoReply(
   customerMessage: string,
   businessContext: string
 ): Promise<string> {
-  const completion = await openai.chat.completions.create({
+  const completion = await getClient().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
