@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { FacebookIcon } from "@/components/ui/facebook-icon";
 import { Zap } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
@@ -113,5 +113,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="w-full max-w-md animate-pulse h-96 bg-gray-100 rounded-2xl" />}>
+      <LoginForm />
+    </React.Suspense>
   );
 }
