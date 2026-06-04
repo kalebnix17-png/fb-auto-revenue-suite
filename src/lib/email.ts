@@ -1,12 +1,12 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY ?? "re_placeholder");
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "FB Auto Revenue Suite";
 const FROM_EMAIL = process.env.EMAIL_FROM ?? "noreply@fbautorevenuesuite.com";
 
 export async function sendWelcomeEmail(to: string, name: string) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `Welcome to ${APP_NAME}!`,
@@ -38,7 +38,7 @@ export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string
 ) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `Reset your ${APP_NAME} password`,
@@ -64,7 +64,7 @@ export async function sendLeadNotificationEmail(
   leadName: string,
   source: string
 ) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `New Lead: ${leadName}`,
@@ -93,7 +93,7 @@ export async function sendSubscriptionEmail(
       ? `You've upgraded to ${plan}!`
       : `Your ${plan} subscription has been canceled`;
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject,
